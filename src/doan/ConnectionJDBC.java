@@ -16,14 +16,14 @@ public class ConnectionJDBC {
     private static final String HOSTNAME = "LAPTOP-GLGO9P0T";
     private static final String PORT = "1521";
     private static final String SID = "orcl";
-    private static final String USERNAME = "citygreen";
+    private static final String USERNAM = "citygreent";
     private static final String PASSWORD = "abc";
     
     public static Connection getConnection() throws SQLException {
         String connectionURL = String.format("jdbc:oracle:thin:@%s:%s:%s", HOSTNAME, PORT, SID);
         try {
             Class.forName("oracle.jdbc.driver.OracleDriver");
-            return DriverManager.getConnection(connectionURL, USERNAME, PASSWORD);
+            return DriverManager.getConnection(connectionURL, USERNAM, PASSWORD);
         } catch (ClassNotFoundException e) {
             throw new SQLException("Oracle JDBC Driver not found.", e);
         }

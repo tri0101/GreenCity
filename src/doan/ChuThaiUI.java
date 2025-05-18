@@ -55,7 +55,7 @@ public class ChuThaiUI extends JFrame {
 
         // Tạo sidebar
         sideBar = new JPanel();
-        sideBar.setLayout(new GridLayout(8, 1, 0, 10));
+        sideBar.setLayout(new GridLayout(9, 1, 0, 10));
         sideBar.setPreferredSize(new Dimension(200, 0));
         sideBar.setBackground(new Color(25, 42, 86));
         sideBar.setBorder(new EmptyBorder(20, 10, 20, 10));
@@ -82,6 +82,7 @@ public class ChuThaiUI extends JFrame {
             "Xem hóa đơn",
             "Danh sách hợp đồng",
             "Hướng dẫn phân loại",
+            "Cài đặt",
             "Đăng xuất"
         };
 
@@ -102,6 +103,7 @@ public class ChuThaiUI extends JFrame {
         mainPanel.add(createHoaDonPanel(), "Xem hóa đơn");
         mainPanel.add(createHopDongPanel(), "Danh sách hợp đồng");
         mainPanel.add(createHuongDanPanel(), "Hướng dẫn phân loại");
+        mainPanel.add(createSettingsPanel(), "Cài đặt");
         mainPanel.add(createDangXuatPanel(), "Đăng xuất");
 
         add(sideBar, BorderLayout.WEST);
@@ -688,6 +690,125 @@ public class ChuThaiUI extends JFrame {
         
         detailPanel.revalidate();
         detailPanel.repaint();
+    }
+
+    private JPanel createSettingsPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Tiêu đề
+        JLabel titleLabel = new JLabel("Cài đặt", JLabel.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        // Panel chứa form đổi mật khẩu
+        JPanel formPanel = new JPanel(new GridLayout(5, 2, 10, 10));
+        formPanel.setBorder(new EmptyBorder(20, 50, 20, 50));
+
+        // Mật khẩu cũ
+        JLabel oldPassLabel = new JLabel("Mật khẩu cũ:");
+        JPasswordField oldPassField = new JPasswordField();
+        formPanel.add(oldPassLabel);
+        formPanel.add(oldPassField);
+
+        // Mật khẩu mới
+        JLabel newPassLabel = new JLabel("Mật khẩu mới:");
+        JPasswordField newPassField = new JPasswordField();
+        formPanel.add(newPassLabel);
+        formPanel.add(newPassField);
+
+        // Xác nhận mật khẩu mới
+        JLabel confirmPassLabel = new JLabel("Xác nhận mật khẩu mới:");
+        JPasswordField confirmPassField = new JPasswordField();
+        formPanel.add(confirmPassLabel);
+        formPanel.add(confirmPassField);
+
+        // Nút đổi mật khẩu
+        JButton changePassButton = new JButton("Đổi mật khẩu");
+        changePassButton.setBackground(new Color(46, 204, 113));
+        changePassButton.setForeground(Color.WHITE);
+        
+        // Thêm sự kiện cho nút đổi mật khẩu
+        changePassButton.addActionListener(e -> {
+            String oldPass = new String(oldPassField.getPassword());
+            String newPass = new String(newPassField.getPassword());
+            String confirmPass = new String(confirmPassField.getPassword());
+
+            // Kiểm tra các trường không được để trống
+            if (oldPass.isEmpty() || newPass.isEmpty() || confirmPass.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    "Vui lòng điền đầy đủ thông tin!",
+                    "Cảnh báo",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Kiểm tra mật khẩu mới và xác nhận mật khẩu
+            if (!newPass.equals(confirmPass)) {
+                JOptionPane.showMessageDialog(this,
+                    "Mật khẩu mới và xác nhận mật khẩu không khớp!",
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                Connection conn = ConnectionJDBC.getConnection();
+                // Kiểm tra mật khẩu cũ
+                String checkSql = "SELECT * FROM TaiKhoan WHERE MaTaiKhoan = ? AND MatKhau = ?";
+                try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                    checkStmt.setString(1, maKhachHang);
+                    checkStmt.setString(2, oldPass);
+                    ResultSet rs = checkStmt.executeQuery();
+
+                    if (!rs.next()) {
+                        JOptionPane.showMessageDialog(this,
+                            "Mật khẩu cũ không đúng!",
+                            "Lỗi",
+                            JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    // Cập nhật mật khẩu mới
+                    String updateSql = "UPDATE TaiKhoan SET MatKhau = ? WHERE MaTaiKhoan = ?";
+                    try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                        updateStmt.setString(1, newPass);
+                        updateStmt.setString(2, maKhachHang);
+                        int result = updateStmt.executeUpdate();
+
+                        if (result > 0) {
+                            JOptionPane.showMessageDialog(this,
+                                "Đổi mật khẩu thành công!",
+                                "Thông báo",
+                                JOptionPane.INFORMATION_MESSAGE);
+                            // Clear các trường
+                            oldPassField.setText("");
+                            newPassField.setText("");
+                            confirmPassField.setText("");
+                        }
+                    }
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi đổi mật khẩu: " + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        });
+
+        // Panel cho nút
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.add(changePassButton);
+        formPanel.add(new JLabel()); // Placeholder
+        formPanel.add(buttonPanel);
+
+        // Thêm form vào panel chính
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(formPanel, BorderLayout.NORTH);
+        panel.add(centerPanel, BorderLayout.CENTER);
+
+        return panel;
     }
 
     private JPanel createDangXuatPanel() {

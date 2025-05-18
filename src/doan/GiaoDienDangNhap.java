@@ -14,10 +14,7 @@ import java.sql.SQLException;
 public class GiaoDienDangNhap extends JFrame {
     private JTextField userField;
     private JPasswordField passField;
-    private JTextField phoneField;
-    private JPanel normalLoginPanel;
-    private JPanel phoneLoginPanel;
-    private CardLayout cardLayout;
+    private JPanel loginPanel;
 
     public GiaoDienDangNhap() {
         setTitle("Đăng nhập hệ thống");
@@ -48,106 +45,75 @@ public class GiaoDienDangNhap extends JFrame {
         leftPanel.setPreferredSize(new Dimension(250, 400));
         mainPanel.add(leftPanel, BorderLayout.WEST);
 
-        // Right panel with CardLayout
-        JPanel rightPanel = new JPanel();
-        cardLayout = new CardLayout();
-        rightPanel.setLayout(cardLayout);
-        rightPanel.setBackground(new Color(240, 240, 240));
-
-        // Normal login panel
-        normalLoginPanel = new JPanel(null);
-        normalLoginPanel.setBackground(new Color(240, 240, 240));
+        // Login panel
+        loginPanel = new JPanel(null);
+        loginPanel.setBackground(new Color(240, 240, 240));
 
         JLabel titleLabel = new JLabel("ĐĂNG NHẬP");
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
         titleLabel.setBounds(150, 30, 200, 30);
-        normalLoginPanel.add(titleLabel);
+        loginPanel.add(titleLabel);
 
         JLabel userLabel = new JLabel("Tài khoản");
         userLabel.setBounds(80, 80, 100, 25);
-        normalLoginPanel.add(userLabel);
+        loginPanel.add(userLabel);
 
         userField = new JTextField();
         userField.setBounds(80, 105, 250, 30);
         userField.setBorder(BorderFactory.createLineBorder(Color.ORANGE));
-        normalLoginPanel.add(userField);
+        loginPanel.add(userField);
 
         JLabel passLabel = new JLabel("Mật khẩu");
         passLabel.setBounds(80, 145, 100, 25);
-        normalLoginPanel.add(passLabel);
+        loginPanel.add(passLabel);
 
         passField = new JPasswordField();
         passField.setBounds(80, 170, 250, 30);
-        normalLoginPanel.add(passField);
-
-        // Phone login link
-        JLabel phoneLoginLink = new JLabel("Đăng nhập bằng số điện thoại");
-        phoneLoginLink.setBounds(80, 205, 200, 25);
-        phoneLoginLink.setForeground(new Color(0, 102, 204));
-        phoneLoginLink.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        phoneLoginLink.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                cardLayout.show(rightPanel, "phone");
-            }
-        });
-        normalLoginPanel.add(phoneLoginLink);
+        loginPanel.add(passField);
 
         JButton loginButton = new JButton("Đăng nhập");
-        loginButton.setBounds(80, 235, 250, 35);
+        loginButton.setBounds(80, 220, 250, 35);
         loginButton.setBackground(new Color(20, 22, 58));
         loginButton.setForeground(Color.WHITE);
-        normalLoginPanel.add(loginButton);
+        loginPanel.add(loginButton);
 
-        // Phone login panel
-        phoneLoginPanel = new JPanel(null);
-        phoneLoginPanel.setBackground(new Color(240, 240, 240));
-
-        JLabel phoneTitleLabel = new JLabel("ĐĂNG NHẬP ");
-        phoneTitleLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
-        phoneTitleLabel.setBounds(150, 30, 300, 30);
-        phoneLoginPanel.add(phoneTitleLabel);
-
-        JLabel phoneLabel = new JLabel("Số điện thoại");
-        phoneLabel.setBounds(80, 80, 100, 25);
-        phoneLoginPanel.add(phoneLabel);
-
-        phoneField = new JTextField();
-        phoneField.setBounds(80, 105, 250, 30);
-        phoneField.setBorder(BorderFactory.createLineBorder(Color.ORANGE));
-        phoneLoginPanel.add(phoneField);
-
-        // Back to normal login link
-        JLabel backToLoginLink = new JLabel("Đăng nhập bằng tài khoản");
-        backToLoginLink.setBounds(80, 140, 200, 25);
-        backToLoginLink.setForeground(new Color(0, 102, 204));
-        backToLoginLink.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        backToLoginLink.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                cardLayout.show(rightPanel, "normal");
-            }
-        });
-        phoneLoginPanel.add(backToLoginLink);
-
-        JButton phoneLoginButton = new JButton("Đăng nhập");
-        phoneLoginButton.setBounds(80, 175, 250, 35);
-        phoneLoginButton.setBackground(new Color(20, 22, 58));
-        phoneLoginButton.setForeground(Color.WHITE);
-        phoneLoginPanel.add(phoneLoginButton);
-
-        // Add panels to right panel with CardLayout
-        rightPanel.add(normalLoginPanel, "normal");
-        rightPanel.add(phoneLoginPanel, "phone");
-
-        // Add action listeners
+        // Add action listener for login
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String username = userField.getText().trim();
                 String password = new String(passField.getPassword()).trim();
 
+                if (username.isEmpty() || password.isEmpty()) {
+                    JOptionPane.showMessageDialog(GiaoDienDangNhap.this,
+                        "Vui lòng nhập đầy đủ thông tin!",
+                        "Cảnh báo",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
                 try {
                     Connection conn = ConnectionJDBC.getConnection();
-                    String sql = "SELECT * FROM NhanVienDieuPhoi WHERE Username = ? AND Password = ?";
+                    String sql;
+                    String userType;
+                    
+                    if (username.toLowerCase().startsWith("ct_")) {
+                        sql = "SELECT * FROM ChuThai WHERE Username = ? AND Password = ?";
+                        userType = "ChuThai";
+                    } else if (username.toLowerCase().startsWith("nvtg_")) {
+                        sql = "SELECT * FROM NhanVienThuGom WHERE Username = ? AND Password = ?";
+                        userType = "NhanVienThuGom";
+                    } else if (username.toLowerCase().startsWith("nvdp_")) {
+                        sql = "SELECT * FROM NhanVienDieuPhoi WHERE Username = ? AND Password = ?";
+                        userType = "NhanVienDieuPhoi";
+                    } else {
+                        JOptionPane.showMessageDialog(GiaoDienDangNhap.this,
+                            "Tên đăng nhập hoặc mật khẩu không đúng",
+                            "Lỗi đăng nhập",
+                            JOptionPane.ERROR_MESSAGE);
+                        passField.setText("");
+                        return;
+                    }
                     
                     try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                         pstmt.setString(1, username);
@@ -156,12 +122,34 @@ public class GiaoDienDangNhap extends JFrame {
                         
                         if (rs.next()) {
                             dispose();
-                            new QuanLyRacThaiUI().setVisible(true);
+                            switch (userType) {
+                                case "ChuThai":
+                                    String maChuThai = rs.getString("MaChuThai");
+                                    String hoTen = rs.getString("HoTen");
+                                    new ChuThaiUI(hoTen, maChuThai).setVisible(true);
+                                    break;
+                                case "NhanVienThuGom":
+                                    String maNvtg = rs.getString("MaNvtg");
+                                    String tenNvtg = rs.getString("TenNvtg");
+                                    new NvtgUI(maNvtg, tenNvtg).setVisible(true);
+                                    break;
+                                case "NhanVienDieuPhoi":
+                                    String maNvdp = rs.getString("MaNvdp");
+                                    String tenNvdp = rs.getString("TenNvdp");
+                                    new QuanLyRacThaiUI().setVisible(true);
+                                    break;
+                            }
                         } else {
                             JOptionPane.showMessageDialog(GiaoDienDangNhap.this,
-                                "Tài khoản hoặc mật khẩu không đúng",
+                                "Tên đăng nhập hoặc mật khẩu không đúng",
                                 "Lỗi đăng nhập",
                                 JOptionPane.ERROR_MESSAGE);
+                            passField.setText("");
+                            if (userField.getText().trim().isEmpty()) {
+                                userField.requestFocus();
+                            } else {
+                                passField.requestFocus();
+                            }
                         }
                     }
                 } catch (SQLException ex) {
@@ -174,50 +162,7 @@ public class GiaoDienDangNhap extends JFrame {
             }
         });
 
-        phoneLoginButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String phone = phoneField.getText().trim();
-                
-                if (phone.isEmpty()) {
-                    JOptionPane.showMessageDialog(GiaoDienDangNhap.this,
-                        "Vui lòng nhập số điện thoại!",
-                        "Lỗi",
-                        JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-                
-                try {
-                    Connection conn = ConnectionJDBC.getConnection();
-                    String sql = "SELECT MaChuThai, HoTen FROM ChuThai WHERE Sdt = ?";
-                    
-                    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                        pstmt.setString(1, phone);
-                        ResultSet rs = pstmt.executeQuery();
-                        
-                        if (rs.next()) {
-                            String maChuThai = rs.getString("MaChuThai");
-                            String hoTen = rs.getString("HoTen");
-                            dispose();
-                            new ChuThaiUI(hoTen, maChuThai).setVisible(true);
-                        } else {
-                            JOptionPane.showMessageDialog(GiaoDienDangNhap.this,
-                                "Số điện thoại này chưa đăng ký tài khoản!",
-                                "Thông báo",
-                                JOptionPane.INFORMATION_MESSAGE);
-                        }
-                    }
-                } catch (SQLException ex) {
-                    JOptionPane.showMessageDialog(GiaoDienDangNhap.this,
-                        "Lỗi kết nối cơ sở dữ liệu: " + ex.getMessage(),
-                        "Lỗi",
-                        JOptionPane.ERROR_MESSAGE);
-                    ex.printStackTrace();
-                }
-            }
-        });
-
-        mainPanel.add(rightPanel, BorderLayout.CENTER);
+        mainPanel.add(loginPanel, BorderLayout.CENTER);
         add(mainPanel);
     }
 
