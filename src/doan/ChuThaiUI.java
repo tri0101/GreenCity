@@ -131,43 +131,42 @@ public class ChuThaiUI extends JFrame {
         panel.add(titleLabel, BorderLayout.NORTH);
 
         // Form đặt lịch
-        JPanel formPanel = new JPanel(new GridLayout(6, 2, 10, 10));
+        JPanel formPanel = new JPanel(new GridLayout(8, 2, 10, 10));
         formPanel.setBorder(new EmptyBorder(20, 50, 20, 50));
 
-        formPanel.add(new JLabel("Ngày thu gom:"));
+        formPanel.add(new JLabel("Ngày bắt đầu thu gom:"));
         
         // Tạo JSpinner cho ngày tháng năm
         Calendar calendar = Calendar.getInstance();
-        // Đặt thời gian về đầu ngày để so sánh chính xác
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
         Date today = calendar.getTime();
         
-        // Đặt giới hạn đến năm 2030
+        // Thêm 1 ngày vào ngày hiện tại để đảm bảo ngày chọn phải lớn hơn ngày hiện tại
+        calendar.add(Calendar.DAY_OF_MONTH, 1);
+        Date minDate = calendar.getTime();
+        
         Calendar maxCal = Calendar.getInstance();
         maxCal.set(2030, Calendar.DECEMBER, 31, 23, 59, 59);
         Date maxDate = maxCal.getTime();
         
-        SpinnerDateModel dateModel = new SpinnerDateModel(today, today, maxDate, Calendar.DAY_OF_MONTH);
+        SpinnerDateModel dateModel = new SpinnerDateModel(minDate, minDate, maxDate, Calendar.DAY_OF_MONTH);
         JSpinner dateSpinner = new JSpinner(dateModel);
         
-        // Tạo và cấu hình DateEditor
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "dd/MM/yyyy");
         dateSpinner.setEditor(dateEditor);
         
-        // Cấu hình JFormattedTextField bên trong DateEditor
         JFormattedTextField ftf = ((JSpinner.DefaultEditor) dateSpinner.getEditor()).getTextField();
         ftf.setEditable(true);
         ftf.setHorizontalAlignment(JTextField.LEFT);
         ftf.setFont(new Font("Arial", Font.PLAIN, 14));
         
-        // Thêm ChangeListener để kiểm tra ngày hợp lệ
         dateSpinner.addChangeListener(e -> {
             Date selectedDate = (Date) dateSpinner.getValue();
-            if (selectedDate.before(today)) {
-                dateSpinner.setValue(today);
+            if (selectedDate.before(minDate)) {
+                dateSpinner.setValue(minDate);
             } else if (selectedDate.after(maxDate)) {
                 dateSpinner.setValue(maxDate);
             }
@@ -180,10 +179,50 @@ public class ChuThaiUI extends JFrame {
         JComboBox<String> timeBox = new JComboBox<>(times);
         formPanel.add(timeBox);
 
-        formPanel.add(new JLabel("Loại rác:"));
-        String[] types = {"Rác sinh hoạt", "Rác tái chế", "Rác nguy hại"};
-        JComboBox<String> typeBox = new JComboBox<>(types);
-        formPanel.add(typeBox);
+        // Thêm ComboBox chọn loại rác
+        formPanel.add(new JLabel("Chọn loại rác:"));
+        String[] wasteTypes = {"Rác sinh hoạt", "Rác công nghiệp", "Rác tái chế"};
+        JComboBox<String> wasteTypeBox = new JComboBox<>(wasteTypes);
+        formPanel.add(wasteTypeBox);
+
+        // Panel chứa hai ComboBox kế bên nhau
+        JPanel comboPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        
+        // ComboBox 1 (sẽ thay đổi giá trị dựa trên ComboBox 2)
+        JComboBox<String> comboBox1 = new JComboBox<>();
+        
+        // ComboBox 2 (chọn tháng hoặc năm)
+        String[] options = {"Tháng", "Năm"};
+        JComboBox<String> comboBox2 = new JComboBox<>(options);
+        
+        // Thêm sự kiện cho ComboBox 2
+        comboBox2.addActionListener(e -> {
+            String selected = (String) comboBox2.getSelectedItem();
+            comboBox1.removeAllItems();
+            
+            if ("Tháng".equals(selected)) {
+                for (int i = 1; i <= 12; i++) {
+                    comboBox1.addItem(String.valueOf(i));
+                }
+            } else if ("Năm".equals(selected)) {
+                for (int i = 1; i <= 5; i++) {
+                    comboBox1.addItem(String.valueOf(i));
+                }
+            }
+        });
+        
+        // Trigger sự kiện lần đầu để set giá trị mặc định
+        comboBox2.setSelectedItem("Tháng");
+        
+        comboPanel.add(comboBox1);
+        comboPanel.add(comboBox2);
+        
+        formPanel.add(new JLabel("Chọn thời hạn"));
+        formPanel.add(comboPanel);
+
+        formPanel.add(new JLabel("Địa chỉ thu gom:"));
+        JTextField addressField = new JTextField();
+        formPanel.add(addressField);
 
         formPanel.add(new JLabel("Khối lượng ước tính (kg):"));
         JTextField weightField = new JTextField();
@@ -408,8 +447,18 @@ public class ChuThaiUI extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         panel.add(titleLabel, BorderLayout.NORTH);
 
+        // Tạo JSplitPane để chia màn hình thành 2 phần theo chiều dọc
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        splitPane.setDividerLocation(300);
+
+        // Panel cho bảng hợp đồng
+        JPanel hopDongPanel = new JPanel(new BorderLayout());
+        JLabel hopDongLabel = new JLabel("Danh sách hợp đồng", JLabel.CENTER);
+        hopDongLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        hopDongPanel.add(hopDongLabel, BorderLayout.NORTH);
+
         // Tạo bảng hợp đồng
-        String[] columnNames = {
+        String[] hopDongColumns = {
             "Mã hợp đồng", 
             "Mã chủ thải", 
             "Loại hợp đồng",
@@ -420,16 +469,49 @@ public class ChuThaiUI extends JFrame {
             "Trạng thái"
         };
 
-        DefaultTableModel model = new DefaultTableModel(columnNames, 0) {
+        DefaultTableModel hopDongModel = new DefaultTableModel(hopDongColumns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
 
-        JTable table = new JTable(model);
-        JScrollPane scrollPane = new JScrollPane(table);
-        panel.add(scrollPane, BorderLayout.CENTER);
+        JTable hopDongTable = new JTable(hopDongModel);
+        JScrollPane hopDongScrollPane = new JScrollPane(hopDongTable);
+        hopDongPanel.add(hopDongScrollPane, BorderLayout.CENTER);
+
+        // Panel cho bảng chi tiết hợp đồng
+        JPanel chiTietPanel = new JPanel(new BorderLayout());
+        JLabel chiTietLabel = new JLabel("Chi tiết hợp đồng", JLabel.CENTER);
+        chiTietLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        chiTietPanel.add(chiTietLabel, BorderLayout.NORTH);
+
+        // Tạo bảng chi tiết hợp đồng
+        String[] chiTietColumns = {
+            "Địa chỉ thu gom",
+            "Tên dịch vụ",
+            "Đơn vị tính",
+            "Đơn giá",
+            "Số lượng",
+            "Thành tiền",
+            "Ghi chú"
+        };
+
+        DefaultTableModel chiTietModel = new DefaultTableModel(chiTietColumns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        JTable chiTietTable = new JTable(chiTietModel);
+        JScrollPane chiTietScrollPane = new JScrollPane(chiTietTable);
+        chiTietPanel.add(chiTietScrollPane, BorderLayout.CENTER);
+
+        // Thêm các panel vào split pane
+        splitPane.setTopComponent(hopDongPanel);
+        splitPane.setBottomComponent(chiTietPanel);
+        panel.add(splitPane, BorderLayout.CENTER);
 
         // Load dữ liệu hợp đồng từ database
         try {
@@ -451,7 +533,7 @@ public class ChuThaiUI extends JFrame {
                         rs.getString("MoTa"),
                         rs.getString("TrangThai")
                     };
-                    model.addRow(row);
+                    hopDongModel.addRow(row);
                 }
             }
         } catch (SQLException ex) {
@@ -462,24 +544,63 @@ public class ChuThaiUI extends JFrame {
             ex.printStackTrace();
         }
 
-        // Điều chỉnh độ rộng các cột
-        table.getColumnModel().getColumn(0).setPreferredWidth(100); // Mã hợp đồng
-        table.getColumnModel().getColumn(1).setPreferredWidth(100); // Mã chủ thải
-        table.getColumnModel().getColumn(2).setPreferredWidth(150); // Loại hợp đồng
-        table.getColumnModel().getColumn(3).setPreferredWidth(100); // Ngày bắt đầu
-        table.getColumnModel().getColumn(4).setPreferredWidth(100); // Ngày kết thúc
-        table.getColumnModel().getColumn(5).setPreferredWidth(100); // Giá trị
-        table.getColumnModel().getColumn(6).setPreferredWidth(200); // Mô tả
-        table.getColumnModel().getColumn(7).setPreferredWidth(100); // Trạng thái
+        // Thêm sự kiện click vào bảng hợp đồng
+        hopDongTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int selectedRow = hopDongTable.getSelectedRow();
+                if (selectedRow != -1) {
+                    String maHopDong = hopDongTable.getValueAt(selectedRow, 0).toString();
+                    loadChiTietHopDong(maHopDong, chiTietModel);
+                }
+            }
+        });
 
-        // Căn giữa nội dung các cột
+        // Điều chỉnh độ rộng các cột
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
-        for (int i = 0; i < table.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        
+        for (int i = 0; i < hopDongTable.getColumnCount(); i++) {
+            hopDongTable.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+        
+        for (int i = 0; i < chiTietTable.getColumnCount(); i++) {
+            chiTietTable.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
         }
 
         return panel;
+    }
+
+    private void loadChiTietHopDong(String maHopDong, DefaultTableModel model) {
+        model.setRowCount(0); // Clear existing data
+        
+        try {
+            Connection conn = ConnectionJDBC.getConnection();
+            String sql = "SELECT * FROM ChiTietHopDong WHERE MaHopDong = ?";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, maHopDong);
+                ResultSet rs = pstmt.executeQuery();
+                
+                while (rs.next()) {
+                    Object[] row = {
+                        rs.getString("DiaChiThuGom"),
+                        rs.getString("TenDichVu"),
+                        rs.getString("DonViTinh"),
+                        String.format("%,.2f", rs.getDouble("DonGia")),
+                        rs.getInt("SoLuong"),
+                        String.format("%,.2f", rs.getDouble("ThanhTien")),
+                        rs.getString("GhiChu")
+                    };
+                    model.addRow(row);
+                }
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                "Lỗi khi tải chi tiết hợp đồng: " + ex.getMessage(),
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
     }
 
     private JPanel createHuongDanPanel() {
