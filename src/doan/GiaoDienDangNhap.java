@@ -91,21 +91,9 @@ public class GiaoDienDangNhap extends JFrame {
         passField.setBounds(80, 170, 250, 30);
         loginPanel.add(passField);
 
-        JButton loginButton = new JButton("Đăng nhập");
-        loginButton.setBounds(80, 220, 250, 35);
-        loginButton.setBackground(new Color(20, 22, 58));
-        loginButton.setForeground(Color.WHITE);
-        loginPanel.add(loginButton);
-
-        JButton registerButton = new JButton("Đăng ký");
-        registerButton.setBounds(80, 265, 250, 35);
-        registerButton.setBackground(new Color(20, 22, 58));
-        registerButton.setForeground(Color.WHITE);
-        loginPanel.add(registerButton);
-
         // Thêm link quên mật khẩu
         JLabel forgotPassLabel = new JLabel("Quên mật khẩu?");
-        forgotPassLabel.setBounds(80, 310, 100, 20);
+        forgotPassLabel.setBounds(80, 210, 100, 20);
         forgotPassLabel.setForeground(new Color(0, 102, 204));
         forgotPassLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
         forgotPassLabel.addMouseListener(new MouseAdapter() {
@@ -116,6 +104,18 @@ public class GiaoDienDangNhap extends JFrame {
             }
         });
         loginPanel.add(forgotPassLabel);
+
+        JButton loginButton = new JButton("Đăng nhập");
+        loginButton.setBounds(80, 240, 250, 35);
+        loginButton.setBackground(new Color(20, 22, 58));
+        loginButton.setForeground(Color.WHITE);
+        loginPanel.add(loginButton);
+
+        JButton registerButton = new JButton("Đăng ký");
+        registerButton.setBounds(80, 285, 250, 35);
+        registerButton.setBackground(new Color(20, 22, 58));
+        registerButton.setForeground(Color.WHITE);
+        loginPanel.add(registerButton);
 
         // Forgot Password Panel
         forgotPasswordPanel = new JPanel(null);
@@ -222,10 +222,9 @@ public class GiaoDienDangNhap extends JFrame {
 
         JLabel registerTitleLabel = new JLabel("ĐĂNG KÝ TÀI KHOẢN");
         registerTitleLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
-        registerTitleLabel.setBounds(250, 30, 250, 30);
+        registerTitleLabel.setBounds(120, 30, 250, 30);
         registerPanel.add(registerTitleLabel);
 
-        // Cột 1
         // Họ tên
         JLabel hoTenLabel = new JLabel("Họ tên:");
         hoTenLabel.setBounds(80, 80, 100, 25);
@@ -266,56 +265,55 @@ public class GiaoDienDangNhap extends JFrame {
         emailRegField.setBorder(BorderFactory.createLineBorder(Color.ORANGE));
         registerPanel.add(emailRegField);
 
-        // Cột 2
         // Loại chủ thải
         JLabel loaiChuThaiLabel = new JLabel("Loại chủ thải:");
-        loaiChuThaiLabel.setBounds(380, 80, 100, 25);
+        loaiChuThaiLabel.setBounds(80, 340, 100, 25);
         registerPanel.add(loaiChuThaiLabel);
 
-        String[] loaiChuThai = {"Cá nhân", "Doanh nghiệp"};
+        String[] loaiChuThai = {"Hộ gia đình", "Doanh nghiệp", "Cơ quan"};
         JComboBox<String> loaiChuThaiCombo = new JComboBox<>(loaiChuThai);
-        loaiChuThaiCombo.setBounds(380, 105, 250, 30);
+        loaiChuThaiCombo.setBounds(80, 365, 250, 30);
         registerPanel.add(loaiChuThaiCombo);
 
         // Username
         JLabel usernameLabel = new JLabel("Tên đăng nhập:");
-        usernameLabel.setBounds(380, 145, 100, 25);
+        usernameLabel.setBounds(80, 405, 100, 25);
         registerPanel.add(usernameLabel);
 
         JTextField usernameField = new JTextField();
-        usernameField.setBounds(380, 170, 250, 30);
+        usernameField.setBounds(80, 430, 250, 30);
         usernameField.setBorder(BorderFactory.createLineBorder(Color.ORANGE));
         registerPanel.add(usernameField);
 
         // Password
         JLabel passwordLabel = new JLabel("Mật khẩu:");
-        passwordLabel.setBounds(380, 210, 100, 25);
+        passwordLabel.setBounds(80, 470, 100, 25);
         registerPanel.add(passwordLabel);
 
         JPasswordField passwordField = new JPasswordField();
-        passwordField.setBounds(380, 235, 250, 30);
+        passwordField.setBounds(80, 495, 250, 30);
         passwordField.setBorder(BorderFactory.createLineBorder(Color.ORANGE));
         registerPanel.add(passwordField);
 
         // Confirm Password
         JLabel confirmPasswordLabel = new JLabel("Xác nhận mật khẩu:");
-        confirmPasswordLabel.setBounds(380, 275, 150, 25);
+        confirmPasswordLabel.setBounds(80, 535, 150, 25);
         registerPanel.add(confirmPasswordLabel);
 
         JPasswordField confirmPasswordField = new JPasswordField();
-        confirmPasswordField.setBounds(380, 300, 250, 30);
+        confirmPasswordField.setBounds(80, 560, 250, 30);
         confirmPasswordField.setBorder(BorderFactory.createLineBorder(Color.ORANGE));
         registerPanel.add(confirmPasswordField);
 
         // Buttons
         JButton registerSubmitButton = new JButton("Đăng ký");
-        registerSubmitButton.setBounds(250, 360, 120, 35);
+        registerSubmitButton.setBounds(80, 610, 120, 35);
         registerSubmitButton.setBackground(new Color(20, 22, 58));
         registerSubmitButton.setForeground(Color.WHITE);
         registerPanel.add(registerSubmitButton);
 
         JButton registerBackButton = new JButton("Quay lại");
-        registerBackButton.setBounds(380, 360, 120, 35);
+        registerBackButton.setBounds(210, 610, 120, 35);
         registerBackButton.setBackground(new Color(20, 22, 58));
         registerBackButton.setForeground(Color.WHITE);
         registerPanel.add(registerBackButton);
@@ -507,7 +505,7 @@ public class GiaoDienDangNhap extends JFrame {
         });
 
         registerButton.addActionListener(e -> {
-            setSize(900, 500);
+            setSize(700, 700);
             cardLayout.show(rightPanel, "REGISTER");
         });
 
