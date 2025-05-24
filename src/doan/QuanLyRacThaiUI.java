@@ -208,6 +208,7 @@ public class QuanLyRacThaiUI extends JFrame {
             "Quản lý phản ánh",
             "Quản lý yêu cầu đặt lịch",
             "Quản lý quận",
+            "Quản lý dịch vụ",
             "Thống kê báo cáo"
         };
 
@@ -239,6 +240,7 @@ public class QuanLyRacThaiUI extends JFrame {
         mainPanel.add(createPhanAnhPanel(), "Quản lý phản ánh");
         mainPanel.add(createYeuCauDatLichPanel(), "Quản lý yêu cầu đặt lịch");
         mainPanel.add(createQuanPanel(), "Quản lý quận");
+        mainPanel.add(new DichVuPanel(), "Quản lý dịch vụ");
         mainPanel.add(createThongKePanel(), "Thống kê báo cáo");
 
         // Hiển thị panel Tổng quan mặc định
@@ -1860,16 +1862,20 @@ private void showSearchPhanCongDialog(DefaultTableModel model) {
         JButton editButton = new JButton("Sửa");
         JButton searchButton = new JButton("Tìm kiếm");
         JButton refreshButton = new JButton("Làm mới");
+        JButton viewDetailsButton = new JButton("Xem chi tiết");
+        styleButton(viewDetailsButton);
         
         styleButton(deleteButton);
         styleButton(editButton);
         styleButton(searchButton);
         styleButton(refreshButton);
         
+        buttonPanel.add(viewDetailsButton);
         buttonPanel.add(searchButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(editButton);
         buttonPanel.add(refreshButton);
+        
         
         headerPanel.add(titleLabel, BorderLayout.WEST);
         headerPanel.add(buttonPanel, BorderLayout.EAST);
@@ -1907,6 +1913,14 @@ private void showSearchPhanCongDialog(DefaultTableModel model) {
             int selectedRow = table.getSelectedRow();
             showEditYeuCauDatLichDialog(model, selectedRow);
         });
+        viewDetailsButton.addActionListener(e -> {
+    int selectedRow = table.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn yêu cầu đặt lịch cần xem chi tiết!");
+        return;
+    }
+    showYeuCauDatLichDetailsDialog(model, selectedRow);
+});
         searchButton.addActionListener(e -> showSearchYeuCauDatLichDialog(model));
         refreshButton.addActionListener(e -> loadYeuCauDatLichData(model));
         
@@ -1915,7 +1929,51 @@ private void showSearchPhanCongDialog(DefaultTableModel model) {
         
         return panel;
     }
-
+private void showYeuCauDatLichDetailsDialog(DefaultTableModel model, int selectedRow) {
+    try {
+        int maYC = Integer.parseInt(model.getValueAt(selectedRow, 0).toString());
+        int maFile = maYC - 1;
+        String filePath = "src/DatLichImg/" + maFile + ".txt";
+        java.util.LinkedHashMap<String, String> data = new java.util.LinkedHashMap<>();
+        java.io.File file = new java.io.File(filePath);
+        if (!file.exists()) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Không tìm thấy file: " + filePath, "Lỗi", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                int idx = line.indexOf(":");
+                if (idx > 0) {
+                    String key = line.substring(0, idx).trim();
+                    String value = line.substring(idx + 1).trim();
+                    data.put(key, value);
+                }
+            }
+        }
+        javax.swing.JDialog dialog = new javax.swing.JDialog(this, "Chi tiết yêu cầu đặt lịch", true);
+        dialog.setLayout(new java.awt.BorderLayout(10, 10));
+        dialog.setSize(600, 600);
+        dialog.setLocationRelativeTo(this);
+        javax.swing.JPanel formPanel = new javax.swing.JPanel(new java.awt.GridLayout(data.size(), 2, 10, 10));
+        formPanel.setBorder(new javax.swing.border.EmptyBorder(20, 20, 20, 20));
+        for (java.util.Map.Entry<String, String> entry : data.entrySet()) {
+            formPanel.add(new javax.swing.JLabel(entry.getKey() + ":"));
+            javax.swing.JTextField tf = new javax.swing.JTextField(entry.getValue());
+            tf.setEditable(false);
+            formPanel.add(tf);
+        }
+        dialog.add(formPanel, java.awt.BorderLayout.CENTER);
+        javax.swing.JButton closeBtn = new javax.swing.JButton("Đóng");
+        closeBtn.addActionListener(e -> dialog.dispose());
+        javax.swing.JPanel btnPanel = new javax.swing.JPanel();
+        btnPanel.add(closeBtn);
+        dialog.add(btnPanel, java.awt.BorderLayout.SOUTH);
+        dialog.setVisible(true);
+    } catch (Exception ex) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Lỗi khi xem chi tiết: " + ex.getMessage(), "Lỗi", javax.swing.JOptionPane.ERROR_MESSAGE);
+    }
+}
     private void loadYeuCauDatLichData(DefaultTableModel model) {
         model.setRowCount(0); // Xóa dữ liệu cũ
         
@@ -3163,7 +3221,7 @@ private String getTenTruongNhomByMa(int ma) {
             "Loại hợp đồng",
             "Ngày bắt đầu",
             "Ngày kết thúc",
-            "Giá trị",
+           
             "Mô tả",
             "Trạng thái"
         };
@@ -3182,11 +3240,11 @@ private String getTenTruongNhomByMa(int ma) {
         // ChiTietHopDong Table
         String[] chiTietColumns = {
             "Mã hợp đồng",
+            "Mã dịch vụ",
             "Địa chỉ thu gom",
-            "Tên dịch vụ",
-            "Đơn vị tính",
-            "Đơn giá",
-            "Số lượng",
+            
+            "Khối lượng",
+            
             "Thành tiền",
             "Ghi chú"
         };
@@ -3311,14 +3369,26 @@ private String getTenTruongNhomByMa(int ma) {
                 pstmt.setInt(1, Integer.parseInt(maHopDong));
                 ResultSet rs = pstmt.executeQuery();
                 
-                while (rs.next()) {
+//                while (rs.next()) {
+//                    Object[] row = {
+//                        rs.getString("MaHopDong"),
+//                        rs.getString("DiaChiThuGom"),
+//                        rs.getString("TenDichVu"),
+//                        rs.getString("DonViTinh"),
+//                        String.format("%,.2f", rs.getDouble("DonGia")),
+//                        rs.getInt("SoLuong"),
+//                        String.format("%,.2f", rs.getDouble("ThanhTien")),
+//                        rs.getString("GhiChu")
+//                    };
+//                    model.addRow(row);
+//                }
+                 while (rs.next()) {
                     Object[] row = {
                         rs.getString("MaHopDong"),
+                        rs.getString("MaDichVu"),
                         rs.getString("DiaChiThuGom"),
-                        rs.getString("TenDichVu"),
-                        rs.getString("DonViTinh"),
-                        String.format("%,.2f", rs.getDouble("DonGia")),
-                        rs.getInt("SoLuong"),
+                        
+                        rs.getInt("KhoiLuong"),
                         String.format("%,.2f", rs.getDouble("ThanhTien")),
                         rs.getString("GhiChu")
                     };
@@ -3335,124 +3405,167 @@ private String getTenTruongNhomByMa(int ma) {
     }
 
     private void showAddChiTietHopDongDialog(DefaultTableModel model, JTable hopDongTable) {
-        int selectedRow = hopDongTable.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this,
-                "Vui lòng chọn một hợp đồng trước khi thêm chi tiết!",
-                "Cảnh báo",
-                JOptionPane.WARNING_MESSAGE);
-            return;
+    if (hopDongTable.getSelectedRow() == -1) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn hợp đồng cần thêm chi tiết!");
+        return;
+    }
+
+    // Lấy mã hợp đồng từ bảng hợp đồng
+    int maHopDong = Integer.parseInt(hopDongTable.getValueAt(hopDongTable.getSelectedRow(), 0).toString());
+
+    JDialog dialog = new JDialog(this, "Thêm chi tiết hợp đồng", true);
+    dialog.setLayout(new BorderLayout(10, 10));
+    dialog.setSize(400, 400);
+    dialog.setLocationRelativeTo(this);
+
+    JPanel formPanel = new JPanel(new GridLayout(6, 2, 10, 10));
+    formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+    // Mã hợp đồng (không cho sửa)
+    formPanel.add(new JLabel("Mã hợp đồng:"));
+    JTextField maHopDongField = new JTextField(String.valueOf(maHopDong));
+    maHopDongField.setEditable(false);
+    formPanel.add(maHopDongField);
+
+    // ComboBox cho mã dịch vụ
+    formPanel.add(new JLabel("Mã dịch vụ:"));
+    JComboBox<String> maDichVuCombo = new JComboBox<>();
+    java.util.Map<String, Double> donGiaMap = new java.util.HashMap<>();
+    try (Connection conn = ConnectionJDBC.getConnection();
+         PreparedStatement pstmt = conn.prepareStatement("SELECT MaDichVu, TenDichVu, DonGia FROM DichVu ORDER BY MaDichVu");
+         ResultSet rs = pstmt.executeQuery()) {
+        while (rs.next()) {
+            String display = rs.getInt("MaDichVu") + " - " + rs.getString("TenDichVu");
+            maDichVuCombo.addItem(display);
+            donGiaMap.put(display, rs.getDouble("DonGia"));
         }
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(dialog, "Lỗi khi tải dịch vụ: " + ex.getMessage());
+        dialog.dispose();
+        return;
+    }
+    formPanel.add(maDichVuCombo);
 
-        String maHopDong = hopDongTable.getValueAt(selectedRow, 0).toString();
-        
-        JDialog dialog = new JDialog(this, "Thêm chi tiết hợp đồng", true);
-        dialog.setLayout(new BorderLayout(10, 10));
-        dialog.setSize(500, 400);
-        dialog.setLocationRelativeTo(this);
+    formPanel.add(new JLabel("Địa chỉ thu gom:"));
+    JTextField diaChiField = new JTextField();
+    formPanel.add(diaChiField);
 
-        JPanel formPanel = new JPanel(new GridLayout(8, 2, 10, 10));
-        formPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+    formPanel.add(new JLabel("Khối lượng:"));
+    JTextField khoiLuongField = new JTextField();
+    formPanel.add(khoiLuongField);
 
-        formPanel.add(new JLabel("Mã hợp đồng:"));
-        formPanel.add(new JLabel(maHopDong));
+    formPanel.add(new JLabel("Thành tiền:"));
+    JTextField thanhTienField = new JTextField();
+    thanhTienField.setEditable(false);
+    formPanel.add(thanhTienField);
 
-        formPanel.add(new JLabel("Địa chỉ thu gom:"));
-        JTextField diaChiField = new JTextField();
-        formPanel.add(diaChiField);
+    formPanel.add(new JLabel("Ghi chú:"));
+    JTextField ghiChuField = new JTextField();
+    formPanel.add(ghiChuField);
 
-        formPanel.add(new JLabel("Tên dịch vụ:"));
-        JTextField tenDichVuField = new JTextField();
-        formPanel.add(tenDichVuField);
+    // Hàm tính thành tiền
+    Runnable updateThanhTien = () -> {
+        try {
+            String selected = (String) maDichVuCombo.getSelectedItem();
+            double donGia = donGiaMap.get(selected);
+            int kl = Integer.parseInt(khoiLuongField.getText().trim());
+            double tt = kl * donGia;
+            thanhTienField.setText(String.format("%,.2f", tt).replace(",", "X").replace(".", ",").replace("X", "."));
+        } catch (Exception ex) {
+            thanhTienField.setText("");
+        }
+    };
 
-        formPanel.add(new JLabel("Đơn vị tính:"));
-        JTextField donViTinhField = new JTextField();
-        formPanel.add(donViTinhField);
+    // Thêm listener cho combo box và khối lượng
+    maDichVuCombo.addActionListener(e -> updateThanhTien.run());
+    khoiLuongField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+        public void insertUpdate(javax.swing.event.DocumentEvent e) { updateThanhTien.run(); }
+        public void removeUpdate(javax.swing.event.DocumentEvent e) { updateThanhTien.run(); }
+        public void changedUpdate(javax.swing.event.DocumentEvent e) { updateThanhTien.run(); }
+    });
 
-        formPanel.add(new JLabel("Đơn giá:"));
-        JTextField donGiaField = new JTextField();
-        formPanel.add(donGiaField);
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    JButton saveButton = new JButton("Lưu");
+    JButton cancelButton = new JButton("Hủy");
+    styleButton(saveButton);
+    styleButton(cancelButton);
+    buttonPanel.add(cancelButton);
+    buttonPanel.add(saveButton);
 
-        formPanel.add(new JLabel("Số lượng:"));
-        JTextField soLuongField = new JTextField();
-        formPanel.add(soLuongField);
+    saveButton.addActionListener(e -> {
+        try {
+            // Validate input
+            if (diaChiField.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập địa chỉ thu gom!");
+                return;
+            }
 
-        formPanel.add(new JLabel("Ghi chú:"));
-        JTextField ghiChuField = new JTextField();
-        formPanel.add(ghiChuField);
+            if (khoiLuongField.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập khối lượng!");
+                return;
+            }
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton saveButton = new JButton("Lưu");
-        JButton cancelButton = new JButton("Hủy");
-        
-        styleButton(saveButton);
-        styleButton(cancelButton);
-        
-        buttonPanel.add(cancelButton);
-        buttonPanel.add(saveButton);
+            int khoiLuong = Integer.parseInt(khoiLuongField.getText().trim());
+            if (khoiLuong <= 0) {
+                JOptionPane.showMessageDialog(dialog, "Khối lượng phải lớn hơn 0!");
+                return;
+            }
 
-        saveButton.addActionListener(e -> {
-            try {
-                if (diaChiField.getText().trim().isEmpty() ||
-                    tenDichVuField.getText().trim().isEmpty() ||
-                    donViTinhField.getText().trim().isEmpty() ||
-                    donGiaField.getText().trim().isEmpty() ||
-                    soLuongField.getText().trim().isEmpty()) {
-                    JOptionPane.showMessageDialog(dialog,
-                        "Vui lòng điền đầy đủ thông tin!",
-                        "Cảnh báo",
-                        JOptionPane.WARNING_MESSAGE);
+            String selectedDichVu = (String) maDichVuCombo.getSelectedItem();
+            int maDichVu = Integer.parseInt(selectedDichVu.split(" - ")[0]);
+            double thanhTien = Double.parseDouble(thanhTienField.getText().trim().replace(".", "").replace(",", "."));
+
+            // Kiểm tra xem chi tiết hợp đồng đã tồn tại chưa
+            try (Connection conn = ConnectionJDBC.getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement("SELECT COUNT(*) FROM ChiTietHopDong WHERE MaHopDong = ? AND MaDichVu = ?")) {
+                pstmt.setInt(1, maHopDong);
+                pstmt.setInt(2, maDichVu);
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next() && rs.getInt(1) > 0) {
+                    JOptionPane.showMessageDialog(dialog, "Chi tiết hợp đồng này đã tồn tại!");
                     return;
                 }
-
-                double donGia = Double.parseDouble(donGiaField.getText().trim());
-                int soLuong = Integer.parseInt(soLuongField.getText().trim());
-                double thanhTien = donGia * soLuong;
-
-                Connection conn = ConnectionJDBC.getConnection();
-                String sql = "INSERT INTO ChiTietHopDong (MaHopDong, DiaChiThuGom, TenDichVu, DonViTinh, DonGia, SoLuong, ThanhTien, GhiChu) " +
-                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                
-                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                    pstmt.setString(1, maHopDong);
-                    pstmt.setString(2, diaChiField.getText().trim());
-                    pstmt.setString(3, tenDichVuField.getText().trim());
-                    pstmt.setString(4, donViTinhField.getText().trim());
-                    pstmt.setDouble(5, donGia);
-                    pstmt.setInt(6, soLuong);
-                    pstmt.setDouble(7, thanhTien);
-                    pstmt.setString(8, ghiChuField.getText().trim());
-                    
-                    int result = pstmt.executeUpdate();
-                    if (result > 0) {
-                        JOptionPane.showMessageDialog(dialog,
-                            "Thêm chi tiết hợp đồng thành công!",
-                            "Thông báo",
-                            JOptionPane.INFORMATION_MESSAGE);
-                        loadChiTietHopDongData(model, maHopDong);
-                        dialog.dispose();
-                    }
-                }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(dialog,
-                    "Đơn giá và số lượng phải là số!",
-                    "Lỗi",
-                    JOptionPane.ERROR_MESSAGE);
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(dialog,
-                    "Lỗi khi thêm chi tiết hợp đồng: " + ex.getMessage(),
-                    "Lỗi",
-                    JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
             }
-        });
 
-        cancelButton.addActionListener(e -> dialog.dispose());
+            // Thêm chi tiết hợp đồng mới
+            String sql = "INSERT INTO ChiTietHopDong (MaHopDong, MaDichVu, DiaChiThuGom, KhoiLuong, ThanhTien, GhiChu) VALUES (?, ?, ?, ?, ?, ?)";
+            try (Connection conn = ConnectionJDBC.getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, maHopDong);
+                pstmt.setInt(2, maDichVu);
+                pstmt.setString(3, diaChiField.getText().trim());
+                pstmt.setInt(4, khoiLuong);
+                pstmt.setDouble(5, thanhTien);
+                pstmt.setString(6, ghiChuField.getText().trim());
 
-        dialog.add(formPanel, BorderLayout.CENTER);
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
-        dialog.setVisible(true);
-    }
+                pstmt.executeUpdate();
+
+                // Thêm vào bảng
+                model.addRow(new Object[]{
+                    maHopDong,
+                    maDichVu,
+                    diaChiField.getText().trim(),
+                    khoiLuong,
+                    String.format("%,.2f", thanhTien).replace(",", "X").replace(".", ",").replace("X", "."),
+                    ghiChuField.getText().trim()
+                });
+
+                JOptionPane.showMessageDialog(dialog, "Thêm chi tiết hợp đồng thành công!");
+                dialog.dispose();
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(dialog, "Vui lòng nhập giá trị số hợp lệ!");
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(dialog, "Lỗi khi thêm chi tiết hợp đồng: " + ex.getMessage());
+        }
+    });
+
+    cancelButton.addActionListener(e -> dialog.dispose());
+
+    dialog.add(formPanel, BorderLayout.CENTER);
+    dialog.add(buttonPanel, BorderLayout.SOUTH);
+    dialog.setVisible(true);
+}
 
     private void showDeleteChiTietHopDongDialog(DefaultTableModel model, int selectedRow) {
         if (selectedRow == -1) {
@@ -3491,174 +3604,299 @@ private String getTenTruongNhomByMa(int ma) {
         }
     }
 
-    private void showEditChiTietHopDongDialog(DefaultTableModel model, int selectedRow) {
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn chi tiết hợp đồng cần sửa!");
-            return;
+   private void showEditChiTietHopDongDialog(DefaultTableModel model, int selectedRow) {
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn chi tiết hợp đồng cần sửa!");
+        return;
+    }
+
+ // Lấy thông tin chi tiết hợp đồng từ dòng được chọn
+String maHopDongStr = model.getValueAt(selectedRow, 0).toString();
+String maDichVuStr = model.getValueAt(selectedRow, 1).toString();
+String diaChiThuGom = model.getValueAt(selectedRow, 2).toString();
+String khoiLuongStr = model.getValueAt(selectedRow, 3).toString();
+String thanhTienStr = model.getValueAt(selectedRow, 4).toString();
+String ghiChu = model.getValueAt(selectedRow, 5).toString();
+
+// Chuyển đổi sang kiểu số
+int maHopDong = Integer.parseInt(maHopDongStr);
+int maDichVu = Integer.parseInt(maDichVuStr);
+int khoiLuong = Integer.parseInt(khoiLuongStr);
+double thanhTien = Double.parseDouble(thanhTienStr.replace(".", "").replace(",", "."));
+
+    JDialog dialog = new JDialog(this, "Sửa chi tiết hợp đồng", true);
+    dialog.setLayout(new BorderLayout(10, 10));
+    dialog.setSize(400, 400);
+    dialog.setLocationRelativeTo(this);
+
+    JPanel formPanel = new JPanel(new GridLayout(7, 2, 10, 10));
+    formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+    formPanel.add(new JLabel("Mã hợp đồng:"));
+    JTextField maHopDongField = new JTextField(String.valueOf(maHopDong));
+    maHopDongField.setEditable(false);
+    formPanel.add(maHopDongField);
+
+    formPanel.add(new JLabel("Mã dịch vụ:"));
+    JComboBox<String> maDichVuCombo = new JComboBox<>();
+    java.util.Map<String, Double> donGiaMap = new java.util.HashMap<>();
+    try (Connection conn = ConnectionJDBC.getConnection();
+         PreparedStatement pstmt = conn.prepareStatement("SELECT MaDichVu, TenDichVu, DonGia FROM DichVu ORDER BY MaDichVu");
+         ResultSet rs = pstmt.executeQuery()) {
+        while (rs.next()) {
+            String display = rs.getInt("MaDichVu") + " - " + rs.getString("TenDichVu");
+            maDichVuCombo.addItem(display);
+            donGiaMap.put(display, rs.getDouble("DonGia"));
+            if (rs.getInt("MaDichVu") == maDichVu) {
+                maDichVuCombo.setSelectedItem(display);
+            }
         }
+    } catch (SQLException ex) {
+        JOptionPane.showMessageDialog(dialog, "Lỗi khi tải dịch vụ: " + ex.getMessage());
+        dialog.dispose();
+        return;
+    }
+    formPanel.add(maDichVuCombo);
 
-        // Lấy thông tin chi tiết hợp đồng từ dòng được chọn
-        String maHopDong = model.getValueAt(selectedRow, 0).toString();
-        String diaChiThuGom = model.getValueAt(selectedRow, 1).toString();
-        String tenDichVu = model.getValueAt(selectedRow, 2).toString();
-        String donViTinh = model.getValueAt(selectedRow, 3).toString();
-        
-        // Xử lý chuyển đổi số từ định dạng có dấu phẩy sang dấu chấm
-        String donGiaStr = model.getValueAt(selectedRow, 4).toString().replace(".", "").replace(",", ".");
-        String soLuongStr = model.getValueAt(selectedRow, 5).toString().replace(".", "").replace(",", ".");
-        String thanhTienStr = model.getValueAt(selectedRow, 6).toString().replace(".", "").replace(",", ".");
-        
-        double donGia = Double.parseDouble(donGiaStr);
-        int soLuong = Integer.parseInt(soLuongStr);
-        double thanhTien = Double.parseDouble(thanhTienStr);
-        String ghiChu = model.getValueAt(selectedRow, 7).toString();
+    formPanel.add(new JLabel("Địa chỉ thu gom:"));
+    JTextField diaChiField = new JTextField(diaChiThuGom);
+    formPanel.add(diaChiField);
 
-        // Tạo dialog
-        JDialog dialog = new JDialog(this, "Sửa chi tiết hợp đồng", true);
+    formPanel.add(new JLabel("Khối lượng:"));
+    JTextField khoiLuongField = new JTextField(String.valueOf(khoiLuong));
+    formPanel.add(khoiLuongField);
+
+    formPanel.add(new JLabel("Thành tiền:"));
+    JTextField thanhTienField = new JTextField();
+    thanhTienField.setEditable(false);
+    formPanel.add(thanhTienField);
+
+    formPanel.add(new JLabel("Ghi chú:"));
+    JTextField ghiChuField = new JTextField(ghiChu);
+    formPanel.add(ghiChuField);
+
+    Runnable updateThanhTien = () -> {
+        try {
+            String selected = (String) maDichVuCombo.getSelectedItem();
+            double donGia = donGiaMap.get(selected);
+            int kl = Integer.parseInt(khoiLuongField.getText().trim());
+            double tt = kl * donGia;
+            thanhTienField.setText(String.format("%,.2f", tt).replace(",", "X").replace(".", ",").replace("X", "."));
+        } catch (Exception ex) {
+            thanhTienField.setText("");
+        }
+    };
+    maDichVuCombo.addActionListener(e -> updateThanhTien.run());
+    khoiLuongField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+        public void insertUpdate(javax.swing.event.DocumentEvent e) { updateThanhTien.run(); }
+        public void removeUpdate(javax.swing.event.DocumentEvent e) { updateThanhTien.run(); }
+        public void changedUpdate(javax.swing.event.DocumentEvent e) { updateThanhTien.run(); }
+    });
+    updateThanhTien.run();
+
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    JButton saveButton = new JButton("Lưu");
+    JButton cancelButton = new JButton("Hủy");
+    styleButton(saveButton);
+    styleButton(cancelButton);
+    buttonPanel.add(cancelButton);
+    buttonPanel.add(saveButton);
+
+    saveButton.addActionListener(e -> {
+        try {
+            if (diaChiField.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập địa chỉ thu gom!");
+                return;
+            }
+            int newKhoiLuong = Integer.parseInt(khoiLuongField.getText().trim());
+            if (newKhoiLuong <= 0) {
+                JOptionPane.showMessageDialog(dialog, "Khối lượng phải lớn hơn 0!");
+                return;
+            }
+            String selectedDichVu = (String) maDichVuCombo.getSelectedItem();
+            int newMaDichVu = Integer.parseInt(selectedDichVu.split(" - ")[0]);
+            double newThanhTien = Double.parseDouble(thanhTienField.getText().trim().replace(".", "").replace(",", "."));
+            String sql = "UPDATE ChiTietHopDong SET " +
+                       "MaDichVu = ?, " +
+                       "DiaChiThuGom = ?, " +
+                       "KhoiLuong = ?, " +
+                       "ThanhTien = ?, " +
+                       "GhiChu = ? " +
+                       "WHERE MaHopDong = ? AND MaDichVu = ?";
+            try (Connection conn = ConnectionJDBC.getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, newMaDichVu);
+                pstmt.setString(2, diaChiField.getText().trim());
+                pstmt.setInt(3, newKhoiLuong);
+                pstmt.setDouble(4, newThanhTien);
+                pstmt.setString(5, ghiChuField.getText().trim());
+                pstmt.setInt(6, maHopDong);
+                pstmt.setInt(7, maDichVu);
+                pstmt.executeUpdate();
+                model.setValueAt(newMaDichVu, selectedRow, 1);
+                model.setValueAt(diaChiField.getText().trim(), selectedRow, 2);
+                model.setValueAt(newKhoiLuong, selectedRow, 3);
+                model.setValueAt(String.format("%,.2f", newThanhTien).replace(",", "X").replace(".", ",").replace("X", "."), selectedRow, 4);
+                model.setValueAt(ghiChuField.getText().trim(), selectedRow, 5);
+                JOptionPane.showMessageDialog(dialog, "Cập nhật chi tiết hợp đồng thành công!");
+                dialog.dispose();
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(dialog, "Vui lòng nhập giá trị số hợp lệ!");
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(dialog, "Lỗi khi cập nhật chi tiết hợp đồng: " + ex.getMessage());
+        }
+    });
+    cancelButton.addActionListener(e -> dialog.dispose());
+    dialog.add(formPanel, BorderLayout.CENTER);
+    dialog.add(buttonPanel, BorderLayout.SOUTH);
+    dialog.setVisible(true);
+}
+    private void showSearchChiTietHopDongDialog(DefaultTableModel model) {
+        JDialog dialog = new JDialog(this, "Tìm kiếm chi tiết hợp đồng", true);
         dialog.setLayout(new BorderLayout(10, 10));
-        dialog.setSize(500, 400);
+        dialog.setSize(420, 250);
         dialog.setLocationRelativeTo(this);
 
-        // Form panel
-        JPanel formPanel = new JPanel(new GridLayout(8, 2, 10, 10));
+        JPanel formPanel = new JPanel(new GridLayout(2, 1, 10, 10));
         formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Thêm các trường nhập liệu
-        JTextField diaChiField = new JTextField(diaChiThuGom);
-        JTextField tenDichVuField = new JTextField(tenDichVu);
-        JTextField donViTinhField = new JTextField(donViTinh);
-        JTextField donGiaField = new JTextField(String.format("%,.2f", donGia).replace(",", "X").replace(".", ",").replace("X", "."));
-        JTextField soLuongField = new JTextField(String.format("%,d", soLuong).replace(",", "."));
-        JTextField thanhTienField = new JTextField(String.format("%,.2f", thanhTien).replace(",", "X").replace(".", ",").replace("X", "."));
-        thanhTienField.setEditable(false); // Không cho phép sửa thành tiền
-        JTextField ghiChuField = new JTextField(ghiChu);
-
-        // Thêm listener để tự động tính thành tiền khi đơn giá hoặc số lượng thay đổi
-        DocumentListener calculateListener = new DocumentListener() {
-            private void updateThanhTien() {
-                try {
-                    String donGiaStr = donGiaField.getText().trim().replace(".", "").replace(",", ".");
-                    String soLuongStr = soLuongField.getText().trim().replace(".", "").replace(",", ".");
-                    
-                    double newDonGia = Double.parseDouble(donGiaStr);
-                    int newSoLuong = Integer.parseInt(soLuongStr);
-                    double newThanhTien = newDonGia * newSoLuong;
-                    
-                    thanhTienField.setText(String.format("%,.2f", newThanhTien).replace(",", "X").replace(".", ",").replace("X", "."));
-                } catch (NumberFormatException ex) {
-                    // Bỏ qua lỗi parse số
-                }
-            }
-
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                updateThanhTien();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                updateThanhTien();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                updateThanhTien();
-            }
+        // Tiêu chí tìm kiếm
+        String[] searchCriteria = {
+            "Mã hợp đồng",
+            "Mã dịch vụ",
+            "Địa chỉ thu gom",
+            "Khối lượng",
+            "Thành tiền"
         };
+        JComboBox<String> criteriaCombo = new JComboBox<>(searchCriteria);
+        criteriaCombo.setPreferredSize(new Dimension(150, 35));
+        formPanel.add(criteriaCombo);
 
-        donGiaField.getDocument().addDocumentListener(calculateListener);
-        soLuongField.getDocument().addDocumentListener(calculateListener);
+        // Panel cho input dạng text
+        JPanel textPanel = new JPanel(new BorderLayout());
+        JTextField textField = new JTextField();
+        textPanel.add(textField, BorderLayout.CENTER);
 
-        formPanel.add(new JLabel("Mã hợp đồng:"));
-        formPanel.add(new JLabel(maHopDong));
-        formPanel.add(new JLabel("Địa chỉ thu gom:"));
-        formPanel.add(diaChiField);
-        formPanel.add(new JLabel("Tên dịch vụ:"));
-        formPanel.add(tenDichVuField);
-        formPanel.add(new JLabel("Đơn vị tính:"));
-        formPanel.add(donViTinhField);
-        formPanel.add(new JLabel("Đơn giá:"));
-        formPanel.add(donGiaField);
-        formPanel.add(new JLabel("Số lượng:"));
-        formPanel.add(soLuongField);
-        formPanel.add(new JLabel("Thành tiền:"));
-        formPanel.add(thanhTienField);
-        formPanel.add(new JLabel("Ghi chú:"));
-        formPanel.add(ghiChuField);
+        // Panel cho khoảng giá trị
+        JPanel rangePanel = new JPanel(new GridLayout(1, 4, 1, 1));
+        rangePanel.add(new JLabel("Từ:"));
+        JTextField minField = new JTextField();
+        rangePanel.add(minField);
+        rangePanel.add(new JLabel("Đến:"));
+        JTextField maxField = new JTextField();
+        rangePanel.add(maxField);
 
-        // Button panel
+        // CardLayout cho input
+        JPanel inputPanel = new JPanel(new CardLayout());
+        inputPanel.add(textPanel, "text");
+        inputPanel.add(rangePanel, "range");
+
+        // Thay đổi khi chọn tiêu chí
+        criteriaCombo.addActionListener(e -> {
+            CardLayout cl = (CardLayout) inputPanel.getLayout();
+            String selected = (String) criteriaCombo.getSelectedItem();
+            if (selected.equals("Khối lượng") || selected.equals("Thành tiền")) {
+                cl.show(inputPanel, "range");
+            } else {
+                cl.show(inputPanel, "text");
+            }
+        });
+
+        formPanel.add(inputPanel);
+
+        // Nút
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton saveButton = new JButton("Lưu");
+        JButton searchButton = new JButton("Tìm kiếm");
         JButton cancelButton = new JButton("Hủy");
-        styleButton(saveButton);
+        styleButton(searchButton);
         styleButton(cancelButton);
-
         buttonPanel.add(cancelButton);
-        buttonPanel.add(saveButton);
+        buttonPanel.add(searchButton);
 
-        // Xử lý sự kiện
         cancelButton.addActionListener(e -> dialog.dispose());
 
-        saveButton.addActionListener(e -> {
+        searchButton.addActionListener(e -> {
             try {
-                // Validate input
-                if (diaChiField.getText().trim().isEmpty() ||
-                    tenDichVuField.getText().trim().isEmpty() ||
-                    donViTinhField.getText().trim().isEmpty()) {
-                    JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ thông tin!");
-                    return;
+                Connection conn = ConnectionJDBC.getConnection();
+                StringBuilder sql = new StringBuilder("SELECT * FROM ChiTietHopDong WHERE 1=1");
+                java.util.List<Object> params = new ArrayList<>();
+
+                String selected = (String) criteriaCombo.getSelectedItem();
+                switch (selected) {
+                    case "Mã hợp đồng":
+                        sql.append(" AND MaHopDong = ?");
+                        params.add(Integer.parseInt(textField.getText().trim()));
+                        break;
+                    case "Mã dịch vụ":
+                        sql.append(" AND MaDichVu = ?");
+                        params.add(Integer.parseInt(textField.getText().trim()));
+                        break;
+                    case "Địa chỉ thu gom":
+                        sql.append(" AND LOWER(DiaChiThuGom) LIKE ?");
+                        params.add("%" + textField.getText().trim().toLowerCase() + "%");
+                        break;
+                    case "Khối lượng":
+                        String minKhoiLuong = minField.getText().trim().replace(",", ".").replaceAll("[^\\d.]", "");
+                        String maxKhoiLuong = maxField.getText().trim().replace(",", ".").replaceAll("[^\\d.]", "");
+
+                        double minKL = minKhoiLuong.isEmpty() ? 0 : Double.parseDouble(minKhoiLuong);
+                        double maxKL = maxKhoiLuong.isEmpty() ? Double.MAX_VALUE : Double.parseDouble(maxKhoiLuong);
+
+                        if (minKL > maxKL) {
+                            JOptionPane.showMessageDialog(dialog, "Giá trị 'Từ' phải nhỏ hơn hoặc bằng giá trị 'Đến'!");
+                            return;
+                        }
+
+                        sql.append(" AND KhoiLuong BETWEEN ? AND ?");
+                        params.add(minKL);
+                        params.add(maxKL);
+                        break;
+                    case "Thành tiền":
+                        String minThanhTien = minField.getText().trim().replace(",", ".").replaceAll("[^\\d.]", "");
+                        String maxThanhTien = maxField.getText().trim().replace(",", ".").replaceAll("[^\\d.]", "");
+
+                        double minTT = minThanhTien.isEmpty() ? 0 : Double.parseDouble(minThanhTien);
+                        double maxTT = maxThanhTien.isEmpty() ? Double.MAX_VALUE : Double.parseDouble(maxThanhTien);
+
+                        if (minTT > maxTT) {
+                            JOptionPane.showMessageDialog(dialog, "Giá trị 'Từ' phải nhỏ hơn hoặc bằng giá trị 'Đến'!");
+                            return;
+                        }
+
+                        sql.append(" AND ThanhTien BETWEEN ? AND ?");
+                        params.add(minTT);
+                        params.add(maxTT);
+                        break;
                 }
 
-                // Xử lý chuyển đổi số từ định dạng có dấu phẩy sang dấu chấm
-                String newDonGiaStr = donGiaField.getText().trim().replace(".", "").replace(",", ".");
-                String newSoLuongStr = soLuongField.getText().trim().replace(".", "").replace(",", ".");
-                
-                double newDonGia = Double.parseDouble(newDonGiaStr);
-                int newSoLuong = Integer.parseInt(newSoLuongStr);
-                double newThanhTien = newDonGia * newSoLuong;
+                sql.append(" ORDER BY MaHopDong");
 
-                // Update database
-                Connection conn = ConnectionJDBC.getConnection();
-                String sql = "UPDATE ChiTietHopDong SET " +
-                           "DiaChiThuGom = ?, " +
-                           "TenDichVu = ?, " +
-                           "DonViTinh = ?, " +
-                           "DonGia = ?, " +
-                           "SoLuong = ?, " +
-                           "ThanhTien = ?, " +
-                           "GhiChu = ? " +
-                           "WHERE MaHopDong = ? AND DiaChiThuGom = ? AND TenDichVu = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+                    for (int i = 0; i < params.size(); i++) {
+                        pstmt.setObject(i + 1, params.get(i));
+                    }
 
-                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                    pstmt.setString(1, diaChiField.getText().trim());
-                    pstmt.setString(2, tenDichVuField.getText().trim());
-                    pstmt.setString(3, donViTinhField.getText().trim());
-                    pstmt.setDouble(4, newDonGia);
-                    pstmt.setInt(5, newSoLuong);
-                    pstmt.setDouble(6, newThanhTien);
-                    pstmt.setString(7, ghiChuField.getText().trim());
-                    pstmt.setString(8, maHopDong);
-                    pstmt.setString(9, diaChiThuGom);
-                    pstmt.setString(10, tenDichVu);
+                    ResultSet rs = pstmt.executeQuery();
+                    model.setRowCount(0);
 
-                    pstmt.executeUpdate();
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                            rs.getInt("MaHopDong"),
+                            rs.getInt("MaDichVu"),
+                            rs.getString("DiaChiThuGom"),
+                            rs.getInt("KhoiLuong"),
+                            String.format("%,.2f", rs.getDouble("ThanhTien")),
+                            rs.getString("GhiChu")
+                        });
+                    }
 
-                    // Update table with formatted numbers
-                    model.setValueAt(diaChiField.getText().trim(), selectedRow, 1);
-                    model.setValueAt(tenDichVuField.getText().trim(), selectedRow, 2);
-                    model.setValueAt(donViTinhField.getText().trim(), selectedRow, 3);
-                    model.setValueAt(String.format("%,.2f", newDonGia).replace(",", "X").replace(".", ",").replace("X", "."), selectedRow, 4);
-                    model.setValueAt(String.format("%,d", newSoLuong).replace(",", "."), selectedRow, 5);
-                    model.setValueAt(String.format("%,.2f", newThanhTien).replace(",", "X").replace(".", ",").replace("X", "."), selectedRow, 6);
-                    model.setValueAt(ghiChuField.getText().trim(), selectedRow, 7);
-
-                    JOptionPane.showMessageDialog(dialog, "Cập nhật chi tiết hợp đồng thành công!");
                     dialog.dispose();
                 }
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(dialog, "Vui lòng nhập giá trị số hợp lệ!");
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(dialog, "Lỗi khi cập nhật chi tiết hợp đồng: " + ex.getMessage());
+                JOptionPane.showMessageDialog(dialog, "Lỗi khi tìm kiếm: " + ex.getMessage());
             }
         });
 
@@ -3666,139 +3904,6 @@ private String getTenTruongNhomByMa(int ma) {
         dialog.add(buttonPanel, BorderLayout.SOUTH);
         dialog.setVisible(true);
     }
-
-    private void showSearchChiTietHopDongDialog(DefaultTableModel model) {
-    JDialog dialog = new JDialog(this, "Tìm kiếm chi tiết hợp đồng", true);
-    dialog.setLayout(new BorderLayout(10, 10));
-    dialog.setSize(420, 210);
-    dialog.setLocationRelativeTo(this);
-
-    JPanel formPanel = new JPanel(new GridLayout(2, 1, 10, 10));
-    formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-
-    // Tiêu chí tìm kiếm
-    String[] searchCriteria = {
-        "Mã hợp đồng",
-        "Địa chỉ thu gom",
-        "Tên dịch vụ",
-        "Thành tiền"
-    };
-    JComboBox<String> criteriaCombo = new JComboBox<>(searchCriteria);
-    criteriaCombo.setPreferredSize(new Dimension(150, 35));
-    formPanel.add(criteriaCombo);
-
-    // Các loại input
-    JPanel valuePanel = new JPanel(new BorderLayout(5, 5));
-    JTextField searchField = new JTextField();
-    valuePanel.add(searchField, BorderLayout.CENTER);
-
-    JPanel amountRangePanel = new JPanel(new GridLayout(1, 4, 1, 1));
-    amountRangePanel.add(new JLabel("Từ:"));
-    JTextField minAmountField = new JTextField();
-    amountRangePanel.add(minAmountField);
-    amountRangePanel.add(new JLabel("Đến:"));
-    JTextField maxAmountField = new JTextField();
-    amountRangePanel.add(maxAmountField);
-    amountRangePanel.setVisible(false);
-
-    JPanel inputPanel = new JPanel(new CardLayout());
-    inputPanel.add(valuePanel, "text");
-    inputPanel.add(amountRangePanel, "amount");
-
-    // Thay đổi khi chọn tiêu chí
-    criteriaCombo.addActionListener(e -> {
-        CardLayout cl = (CardLayout) inputPanel.getLayout();
-        String selected = (String) criteriaCombo.getSelectedItem();
-        if (selected.equals("Thành tiền")) {
-            cl.show(inputPanel, "amount");
-        } else {
-            cl.show(inputPanel, "text");
-        }
-    });
-
-    formPanel.add(inputPanel);
-
-    // Nút
-    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-    JButton searchButton = new JButton("Tìm kiếm");
-    JButton cancelButton = new JButton("Hủy");
-    styleButton(searchButton);
-    styleButton(cancelButton);
-    buttonPanel.add(cancelButton);
-    buttonPanel.add(searchButton);
-    dialog.add(buttonPanel, BorderLayout.SOUTH);
-
-    cancelButton.addActionListener(e -> dialog.dispose());
-
-    searchButton.addActionListener(e -> {
-        try {
-            Connection conn = ConnectionJDBC.getConnection();
-            StringBuilder sql = new StringBuilder("SELECT * FROM ChiTietHopDong WHERE 1=1");
-            java.util.List<Object> params = new ArrayList<>();
-
-            String selected = (String) criteriaCombo.getSelectedItem();
-            switch (selected) {
-                case "Mã hợp đồng":
-                    sql.append(" AND MaHopDong = ?");
-                    params.add(Integer.parseInt(searchField.getText().trim()));
-                    break;
-                case "Địa chỉ thu gom":
-                    sql.append(" AND LOWER(DiaChiThuGom) LIKE ?");
-                    params.add("%" + searchField.getText().trim().toLowerCase() + "%");
-                    break;
-                case "Tên dịch vụ":
-                    sql.append(" AND LOWER(TenDichVu) LIKE ?");
-                    params.add("%" + searchField.getText().trim().toLowerCase() + "%");
-                    break;
-                case "Thành tiền":
-                    String minStr = minAmountField.getText().trim().replace(",", ".");
-                    String maxStr = maxAmountField.getText().trim().replace(",", ".");
-                    double min = Double.parseDouble(minStr);
-                    double max = Double.parseDouble(maxStr);
-                    if (min > max) {
-                        JOptionPane.showMessageDialog(dialog, "Giá trị 'Từ' phải nhỏ hơn hoặc bằng giá trị 'Đến'!");
-                        return;
-                    }
-                    sql.append(" AND ThanhTien BETWEEN ? AND ?");
-                    params.add(min);
-                    params.add(max);
-                    break;
-            }
-
-            try (PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
-                for (int i = 0; i < params.size(); i++) {
-                    pstmt.setObject(i + 1, params.get(i));
-                }
-
-                ResultSet rs = pstmt.executeQuery();
-                model.setRowCount(0);
-
-                while (rs.next()) {
-                    model.addRow(new Object[]{
-                        rs.getInt("MaHopDong"),
-                        rs.getString("DiaChiThuGom"),
-                        rs.getString("TenDichVu"),
-                        rs.getString("DonViTinh"),
-                        rs.getDouble("DonGia"),
-                        rs.getInt("SoLuong"),
-                        rs.getDouble("ThanhTien"),
-                        rs.getString("GhiChu")
-                    });
-                }
-
-                dialog.dispose();
-            }
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(dialog, "Vui lòng nhập giá trị số hợp lệ!");
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(dialog, "Lỗi khi tìm kiếm: " + ex.getMessage());
-        }
-    });
-
-    dialog.add(formPanel, BorderLayout.CENTER);
-    dialog.add(buttonPanel, BorderLayout.SOUTH);
-    dialog.setVisible(true);
-}
 
 
     private void showAddHopDongDialog(DefaultTableModel model) {
@@ -3834,9 +3939,9 @@ private String getTenTruongNhomByMa(int ma) {
         ngayKetThucSpinner.setEditor(endDateEditor);
         formPanel.add(ngayKetThucSpinner);
 
-        formPanel.add(new JLabel("Giá trị:"));
-        JTextField giaTriField = new JTextField();
-        formPanel.add(giaTriField);
+//        formPanel.add(new JLabel("Giá trị:"));
+//        JTextField giaTriField = new JTextField();
+//        formPanel.add(giaTriField);
 
         formPanel.add(new JLabel("Mô tả:"));
         JTextField moTaField = new JTextField();
@@ -3861,7 +3966,7 @@ private String getTenTruongNhomByMa(int ma) {
                 // Validate input
                 if (maChuThaiField.getText().trim().isEmpty() || 
                     loaiHopDongField.getText().trim().isEmpty() ||
-                    giaTriField.getText().trim().isEmpty() ||
+//                    giaTriField.getText().trim().isEmpty() ||
                     trangThaiField.getText().trim().isEmpty()) {
                     JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ thông tin!");
                     return;
@@ -3871,21 +3976,21 @@ private String getTenTruongNhomByMa(int ma) {
                 Date ngayBatDau = (Date) ngayBatDauSpinner.getValue();
                 Date ngayKetThuc = (Date) ngayKetThucSpinner.getValue();
 
-                // Parse giá trị
-                double giaTri = Double.parseDouble(giaTriField.getText().trim());
+//                // Parse giá trị
+//                double giaTri = Double.parseDouble(giaTriField.getText().trim());
 
                 // Insert into database
                 Connection conn = ConnectionJDBC.getConnection();
-                String sql = "INSERT INTO HopDong (MaChuThai, LoaiHopDong, NgBatDau, NgKetThuc, GiaTri, MoTa, TrangThai) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                String sql = "INSERT INTO HopDong (MaChuThai, LoaiHopDong, NgBatDau, NgKetThuc,  MoTa, TrangThai) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                     pstmt.setInt(1, Integer.parseInt(maChuThaiField.getText().trim()));
                     pstmt.setString(2, loaiHopDongField.getText().trim());
                     pstmt.setDate(3, new java.sql.Date(ngayBatDau.getTime()));
                     pstmt.setDate(4, new java.sql.Date(ngayKetThuc.getTime()));
-                    pstmt.setDouble(5, giaTri);
-                    pstmt.setString(6, moTaField.getText().trim());
-                    pstmt.setString(7, trangThaiField.getText().trim());
+//                    pstmt.setDouble(5, giaTri);
+                    pstmt.setString(5, moTaField.getText().trim());
+                    pstmt.setString(6, trangThaiField.getText().trim());
                     
                     pstmt.executeUpdate();
                     JOptionPane.showMessageDialog(dialog, "Thêm hợp đồng thành công!");
@@ -3982,9 +4087,9 @@ private String getTenTruongNhomByMa(int ma) {
                 ngayKetThucSpinner.setValue(rs.getDate("NgKetThuc"));
                 formPanel.add(ngayKetThucSpinner);
 
-                formPanel.add(new JLabel("Giá trị:"));
-                JTextField giaTriField = new JTextField(String.valueOf(rs.getDouble("GiaTri")));
-                formPanel.add(giaTriField);
+//                formPanel.add(new JLabel("Giá trị:"));
+//                JTextField giaTriField = new JTextField(String.valueOf(rs.getDouble("GiaTri")));
+//                formPanel.add(giaTriField);
 
                 formPanel.add(new JLabel("Mô tả:"));
                 JTextField moTaField = new JTextField(rs.getString("MoTa"));
@@ -4009,7 +4114,7 @@ private String getTenTruongNhomByMa(int ma) {
                         // Validate input
                         if (maChuThaiField.getText().trim().isEmpty() || 
                             loaiHopDongField.getText().trim().isEmpty() ||
-                            giaTriField.getText().trim().isEmpty() ||
+//                            giaTriField.getText().trim().isEmpty() ||
                             trangThaiField.getText().trim().isEmpty()) {
                             JOptionPane.showMessageDialog(dialog, "Vui lòng điền đầy đủ thông tin!");
                             return;
@@ -4020,17 +4125,17 @@ private String getTenTruongNhomByMa(int ma) {
                         Date ngayKetThuc = (Date) ngayKetThucSpinner.getValue();
 
                         // Parse giá trị
-                        double giaTri = Double.parseDouble(giaTriField.getText().trim());
+//                        double giaTri = Double.parseDouble(giaTriField.getText().trim());
 
                         // Update database
-                        String updateSql = "UPDATE HopDong SET MaChuThai = ?, LoaiHopDong = ?, NgBatDau = ?, NgKetThuc = ?, GiaTri = ?, MoTa = ?, TrangThai = ? WHERE MaHopDong = ?";
+                        String updateSql = "UPDATE HopDong SET MaChuThai = ?, LoaiHopDong = ?, NgBatDau = ?, NgKetThuc = ?,  MoTa = ?, TrangThai = ? WHERE MaHopDong = ?";
                         
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
                             updateStmt.setInt(1, Integer.parseInt(maChuThaiField.getText().trim()));
                             updateStmt.setString(2, loaiHopDongField.getText().trim());
                             updateStmt.setDate(3, new java.sql.Date(ngayBatDau.getTime()));
                             updateStmt.setDate(4, new java.sql.Date(ngayKetThuc.getTime()));
-                            updateStmt.setDouble(5, giaTri);
+//                            updateStmt.setDouble(5, giaTri);
                             updateStmt.setString(6, moTaField.getText().trim());
                             updateStmt.setString(7, trangThaiField.getText().trim());
                             updateStmt.setInt(8, Integer.parseInt(maHD.trim()));
@@ -4077,7 +4182,7 @@ private String getTenTruongNhomByMa(int ma) {
             "Loại hợp đồng",
             "Ngày bắt đầu",
             "Ngày kết thúc",
-            "Giá trị",
+//            "Giá trị",
             "Trạng thái"
         };
         JComboBox<String> criteriaCombo = new JComboBox<>(searchCriteria);
@@ -4256,15 +4361,15 @@ private String getTenTruongNhomByMa(int ma) {
         
         try {
             Connection conn = ConnectionJDBC.getConnection();
-            String sql = "SELECT MaHopDong, MaChuThai, LoaiHopDong, NgBatDau, NgKetThuc, GiaTri, MoTa, TrangThai FROM HopDong ORDER BY MaHopDong";
+            String sql = "SELECT MaHopDong, MaChuThai, LoaiHopDong, NgBatDau, NgKetThuc,  MoTa, TrangThai FROM HopDong ORDER BY MaHopDong";
             
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 ResultSet rs = pstmt.executeQuery();
                 
                 while (rs.next()) {
                     // Format giá trị tiền tệ
-                    NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
-                    String formattedGiaTri = currencyFormat.format(rs.getDouble("GiaTri"));
+//                    NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+//                    String formattedGiaTri = currencyFormat.format(rs.getDouble("GiaTri"));
                     
                     // Format ngày tháng
                     SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
@@ -4278,7 +4383,7 @@ private String getTenTruongNhomByMa(int ma) {
                         rs.getString("LoaiHopDong"),
                         ngBatDau,
                         ngKetThuc,
-                        formattedGiaTri,
+//                        formattedGiaTri,
                         rs.getString("MoTa"),
                         rs.getString("TrangThai")
                     });
@@ -5869,36 +5974,42 @@ private String getTenTruongNhomByMa(int ma) {
     }
 
     private void showDeleteYeuCauDatLichDialog(DefaultTableModel model, int selectedRow) {
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn yêu cầu đặt lịch cần xóa!");
-            return;
-        }
-
-        int maYC = (int) model.getValueAt(selectedRow, 0);
-        int confirm = JOptionPane.showConfirmDialog(this,
-            "Bạn có chắc chắn muốn xóa yêu cầu đặt lịch này?",
-            "Xác nhận xóa",
-            JOptionPane.YES_NO_OPTION);
-        
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                Connection conn = ConnectionJDBC.getConnection();
-                String sql = "DELETE FROM YeuCauDatLich WHERE MaYc = ?";
-                try (PreparedStatement deleteStmt = conn.prepareStatement(sql)) {
-                    deleteStmt.setInt(1, maYC);
-                    int result = deleteStmt.executeUpdate();
-                    
-                    if (result > 0) {
-                        JOptionPane.showMessageDialog(this, "Xóa yêu cầu đặt lịch thành công!");
-                        loadYeuCauDatLichData(model);
-                    }
-                }
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Lỗi khi xóa yêu cầu đặt lịch: " + ex.getMessage());
-            }
-        }
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn yêu cầu đặt lịch cần xóa!");
+        return;
     }
 
+    int maYC = (int) model.getValueAt(selectedRow, 0);
+    int confirm = JOptionPane.showConfirmDialog(this,
+        "Bạn có chắc chắn muốn xóa yêu cầu đặt lịch này?",
+        "Xác nhận xóa",
+        JOptionPane.YES_NO_OPTION);
+
+    if (confirm == JOptionPane.YES_OPTION) {
+        try {
+            Connection conn = ConnectionJDBC.getConnection();
+            String sql = "DELETE FROM YeuCauDatLich WHERE MaYc = ?";
+            try (PreparedStatement deleteStmt = conn.prepareStatement(sql)) {
+                deleteStmt.setInt(1, maYC);
+                int result = deleteStmt.executeUpdate();
+
+                if (result > 0) {
+                    // Xóa file txt tương ứng
+                    int maFile = maYC - 1;
+                    String filePath = "src/DatLichImg/" + maFile + ".txt";
+                    java.io.File file = new java.io.File(filePath);
+                    if (file.exists()) {
+                        file.delete();
+                    }
+                    JOptionPane.showMessageDialog(this, "Xóa yêu cầu đặt lịch thành công!");
+                    loadYeuCauDatLichData(model);
+                }
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi xóa yêu cầu đặt lịch: " + ex.getMessage());
+        }
+    }
+}
     private void showEditYeuCauDatLichDialog(DefaultTableModel model, int selectedRow) {
     if (selectedRow == -1) {
         JOptionPane.showMessageDialog(this, "Vui lòng chọn yêu cầu đặt lịch cần sửa");

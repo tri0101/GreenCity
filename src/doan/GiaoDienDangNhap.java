@@ -372,7 +372,14 @@ public class GiaoDienDangNhap extends JFrame {
                                 case "NhanVienThuGom":
                                     String maNvtg = rs.getString("MaNvtg");
                                     String tenNvtg = rs.getString("TenNvtg");
-                                    new NvtgUI(maNvtg, tenNvtg).setVisible(true);
+                                    Object maTruongNhomObj = rs.getObject("MaTruongNhom");
+                                    if (maTruongNhomObj == null) {
+                                        // Trưởng nhóm
+                                        new TruongNhomUI(maNvtg, tenNvtg).setVisible(true);
+                                    } else {
+                                        // Nhân viên thường
+                                        new NvtgUI(maNvtg, tenNvtg).setVisible(true);
+                                    }
                                     break;
                                 case "NhanVienDieuPhoi":
                                     String maNvdp = rs.getString("MaNvdp");
